@@ -74,6 +74,7 @@ def main():
     if user_input:
         query_embedding = np.array(get_embedding(user_input)).astype('float32').reshape(1, -1)
         
+        st.write("유사도 계산 중...")
         distances, indices = index.search(query_embedding, k=5)  # 상위 5개 결과 반환
         
         # 상위 결과 추출
@@ -121,20 +122,15 @@ def main():
 
                     locations.forEach((location) => {{
                       if (location.latitude && location.longitude) {{
-                        // 유사도에 따라 마커 크기와 색상 설정
-                        const similarity = location.similarity;
-                        const markerSize = similarity * 30 + 10;  // 크기 설정 (유사도가 높을수록 크기 커짐)
-                        const markerColor = similarity > 0.7 ? 'green' : similarity > 0.4 ? 'orange' : 'red';  // 유사도에 따른 색상 설정
-
                         const marker = new google.maps.Marker({{
                           position: {{ lat: location.latitude, lng: location.longitude }},
                           map: map,
                           title: location.name,
                           icon: {{
                             path: google.maps.SymbolPath.CIRCLE,
-                            scale: markerSize,  // 마커 크기
-                            fillColor: markerColor,  // 마커 색상
-                            fillOpacity: 0.8,
+                            scale: 20,
+                            fillColor: "rgb(255, 0, 0)",
+                            fillOpacity: 0.9,
                             strokeWeight: 1,
                             strokeColor: "#000"
                           }}
