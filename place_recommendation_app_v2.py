@@ -72,10 +72,8 @@ def main():
     user_input = st.text_input("검색어를 입력하세요", placeholder="찾는 장소를 입력하세요.")
 
     if user_input:
-        st.write("입력 텍스트 임베딩 생성 중...")
         query_embedding = np.array(get_embedding(user_input)).astype('float32').reshape(1, -1)
         
-        st.write("유사도 계산 중...")
         distances, indices = index.search(query_embedding, k=5)  # 상위 5개 결과 반환
         
         # 상위 결과 추출
