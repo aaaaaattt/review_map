@@ -92,27 +92,16 @@ def main():
         for _, row in results.iterrows():
             lat, lng = get_location(row['name'], row['address'])
             if lat and lng:
-                # 유사도를 0~1로 강하게 정규화 (강화된 대비)
+                # 유사도를 0~1로 정규화
                 normalized_similarity = (row['similarity'] - min_similarity) / (max_similarity - min_similarity)
-
-                # 색상 대비 강화
-                red = int((1 - normalized_similarity) * 255)  # 유사도가 낮을수록 빨강
-                green = int(normalized_similarity * 255)      # 유사도가 높을수록 초록
-                blue = 0  # 파란색은 고정
-                color = f"rgb({red}, {green}, {blue})"
-
-                # 크기 변화 확대 (10에서 80까지)
-                size = 10 + normalized_similarity * 70
-
+                
                 locations.append({
                     "name": row['name'],
                     "address": row['address'],
                     "review_text": row['review_text'],
                     "similarity": normalized_similarity,  # 정규화된 유사도
                     "latitude": lat,
-                    "longitude": lng,
-                    "color": color,  # 색상 정보
-                    "size": size     # 크기 정보
+                    "longitude": lng
                 })
 
         # 위치 정보가 있는 경우에만 지도 생성
@@ -135,14 +124,20 @@ def main():
 
                     locations.forEach((location) => {{
                       if (location.latitude && location.longitude) {{
+                        const red = Math.floor((1 - location.similarity) * 255);
+                        const green = Math.floor(location.similarity * 255);
+                        const color = `rgb(${red}, ${green}, 0)`;
+
+                        const size = 10 + location.similarity * 40;
+
                         const marker = new google.maps.Marker({{
                           position: {{ lat: location.latitude, lng: location.longitude }},
                           map: map,
                           title: location.name,
                           icon: {{
                             path: google.maps.SymbolPath.CIRCLE,
-                            scale: location.size,
-                            fillColor: location.color,
+                            scale: size,
+                            fillColor: color,
                             fillOpacity: 0.9,
                             strokeWeight: 1,
                             strokeColor: "#000"
