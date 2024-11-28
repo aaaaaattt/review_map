@@ -109,7 +109,7 @@ def main():
                     "name": row['name'],
                     "address": row['address'],
                     "review_text": row['review_text'],
-                    "similarity": normalized_similarity,  # 정규화된 유사도
+                    "similarity": float(normalized_similarity),  # float32 → float 변환
                     "latitude": lat,
                     "longitude": lng,
                     "color": color,  # 색상 정보
