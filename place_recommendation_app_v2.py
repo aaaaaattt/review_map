@@ -19,9 +19,6 @@ load_dotenv()
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 google_maps_api_key = st.secrets["GOOGLE_MAPS_API_KEY"]
 
-# 확인용 출력 (배포된 앱에서는 민감한 정보 노출 금지)
-st.write(f"OpenAI API Key: {openai_api_key[:5]}******")
-st.write(f"Google Maps API Key: {google_maps_api_key[:5]}******")
 
 # FAISS 및 데이터 로드
 faiss_index_path = "./faiss_index.bin"  # 저장된 FAISS 파일 경로
