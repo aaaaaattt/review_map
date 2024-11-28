@@ -5,7 +5,8 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 import time
-from openai import OpenAI  # OpenAI 라이브러리 최신 버전 import
+import json  # JSON 직렬화를 위해 추가
+from openai import OpenAI
 
 # .env 파일 로드
 load_dotenv()
@@ -28,7 +29,6 @@ def get_embedding(text):
             model="text-embedding-ada-002",
             input=text
         )
-        # 최신 OpenAI 라이브러리 메서드로 수정
         return response.data[0].embedding
     except Exception as e:
         st.error(f"임베딩 생성 중 오류 발생: {e}")
@@ -38,7 +38,7 @@ def get_embedding(text):
 index = faiss.read_index(faiss_index_path)
 metadata = pd.read_csv(csv_data_path)
 
-# Google Maps에서 위치 정보 가져오기 (개선된 버전)
+# Google Maps에서 위치 정보 가져오기
 def get_location(name, address, max_retries=3):
     """장소의 위도와 경도를 가져오는 함수"""
     for attempt in range(max_retries):
@@ -55,13 +55,11 @@ def get_location(name, address, max_retries=3):
                 st.warning(f"위치를 찾을 수 없습니다: {name}, {address}")
             else:
                 st.error(f"Google Maps API 오류: {data['status']}")
-            
             return None, None
-        
         except requests.exceptions.RequestException as e:
             st.error(f"네트워크 오류 발생 (시도 {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
-                time.sleep(2)  # 재시도 전 2초 대기
+                time.sleep(2)
             else:
                 st.error("위치 정보를 가져오는 데 실패했습니다.")
                 return None, None
@@ -87,23 +85,41 @@ def main():
 
         st.write("**Google Maps 동적 지도**")
         
-        # JSON 형태로 변환
+        # 위치 정보와 유사도를 정규화하여 JSON 형태로 변환
         locations = []
+        max_similarity = results['similarity'].max()  # 최대 유사도 계산
+        min_similarity = results['similarity'].min()  # 최소 유사도 계산
+
         for _, row in results.iterrows():
             lat, lng = get_location(row['name'], row['address'])
             if lat and lng:
+                # 유사도를 0~1로 강하게 정규화 (강화된 대비)
+                normalized_similarity = (row['similarity'] - min_similarity) / (max_similarity - min_similarity)
+
+                # 색상 대비 강화
+                red = int((1 - normalized_similarity) * 255)  # 유사도가 낮을수록 빨강
+                green = int(normalized_similarity * 255)      # 유사도가 높을수록 초록
+                blue = 0  # 파란색은 고정
+                color = f"rgb({red}, {green}, {blue})"
+
+                # 크기 변화 확대 (10에서 80까지)
+                size = 10 + normalized_similarity * 70
+
                 locations.append({
                     "name": row['name'],
                     "address": row['address'],
                     "review_text": row['review_text'],
-                    "similarity": row['similarity'],
+                    "similarity": normalized_similarity,  # 정규화된 유사도
                     "latitude": lat,
-                    "longitude": lng
+                    "longitude": lng,
+                    "color": color,  # 색상 정보
+                    "size": size     # 크기 정보
                 })
-        
+
         # 위치 정보가 있는 경우에만 지도 생성
         if locations:
-            # HTML 및 JavaScript 생성
+            locations_json = json.dumps(locations)  # Python 리스트를 JSON 문자열로 변환
+
             html_code = f"""
             <!DOCTYPE html>
             <html>
@@ -118,7 +134,7 @@ def main():
                     }});
 
                     const bounds = new google.maps.LatLngBounds();
-                    const locations = {locations};
+                    const locations = {locations_json};  // Python 데이터를 JSON으로 전달
 
                     locations.forEach((location) => {{
                       if (location.latitude && location.longitude) {{
@@ -128,8 +144,8 @@ def main():
                           title: location.name,
                           icon: {{
                             path: google.maps.SymbolPath.CIRCLE,
-                            scale: 20,
-                            fillColor: "rgb(255, 0, 0)",
+                            scale: location.size,
+                            fillColor: location.color,
                             fillOpacity: 0.9,
                             strokeWeight: 1,
                             strokeColor: "#000"
@@ -142,7 +158,7 @@ def main():
                               <h3>${{location.name}}</h3>
                               <p>주소: ${{location.address}}</p>
                               <p>리뷰: ${{location.review_text}}</p>
-                              <p>유사도: ${{(location.similarity * 100).toFixed(2)}}%</p>
+                              <p>유사도: ${(location.similarity * 100).toFixed(2)}%</p>
                             </div>`
                         }});
 
@@ -163,8 +179,6 @@ def main():
               </body>
             </html>
             """
-
-            # Streamlit에서 HTML 출력
             st.components.v1.html(html_code, height=600)
         else:
             st.warning("선택된 장소들의 위치 정보를 가져올 수 없습니다.")
